@@ -1,0 +1,26 @@
+{
+    "manifest_version": 3,
+    "name": "Ad Skipper",
+    "version": "1.0",
+    "description": "A Browser extension to speed ads for you.",
+    "action": {
+        "default_icon": "icon.svg"
+    },
+    "permissions": [
+        "activeTab"
+    ],
+    "host_permissions": [
+        "https://youtube.com/"
+    ],
+    "content_scripts": [
+        {
+            "all_frames": true,
+            "js": [
+                "index.js"
+            ],
+            "matches": [
+                "*://*.youtube.com/*"
+            ]
+        }
+    ]
+}
