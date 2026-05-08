@@ -63,4 +63,5 @@ function handleAd() {
     // }
 }
 
+console.log('Ad Skipper running...')
 setInterval(handleAd, 200);
