@@ -1,4 +1,6 @@
+const CHECK_INTERVAL = 200;
 const SPEED = 16;
+
 let originalSpeed = 1;
 let originalMuted = false;
 let wasAd = false;
@@ -44,6 +46,14 @@ function handleAd() {
         if (!video.muted) {
             video.muted = true;
         }
+
+        // This feature is disabled by YouTube, which uses some kind of
+        // flag to control when an action (click) is being sent by
+        // YouTube itself or by a third party...
+        if (skipButton && skipButton.offsetParent !== null) {
+            skipButton.click();
+            return;
+        }
     } else {
         if (wasAd) {
             video.playbackRate = originalSpeed;
@@ -64,4 +74,7 @@ function handleAd() {
 }
 
 console.log('Ad Skipper running...')
-setInterval(handleAd, 200);
+
+'use strict;'
+document.addEventListener('yt-navigate-finish', handleAd);
+setInterval(handleAd, CHECK_INTERVAL);
