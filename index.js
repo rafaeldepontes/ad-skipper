@@ -1,80 +1,96 @@
-const CHECK_INTERVAL = 200;
+const CHECK_INTERVAL = 1000;
 const SPEED = 16;
 
 let originalSpeed = 1;
 let originalMuted = false;
 let wasAd = false;
 
+function getMoviePlayer() {
+    return document.querySelector('#movie_player');
+}
+
+function getVideo() {
+    return document.querySelector('video');
+}
+
+function isAd(moviePlayer) {
+    return moviePlayer?.classList.contains('ad-showing');
+}
+
+function applyAdState(video) {
+    if (video.playbackRate !== SPEED) {
+        video.playbackRate = SPEED;
+    }
+
+    if (!video.muted) {
+        video.muted = true;
+    }
+}
+
+function restoreVideoState(video) {
+    video.playbackRate = originalSpeed;
+    video.muted = originalMuted;
+}
+
 function handleAd() {
-    const video = document.querySelector('video');
-    if (!video) return;
+    const moviePlayer = getMoviePlayer();
+    const video = getVideo();
 
-    const adSelectors = [
-        '.ad-showing',
-        '.ad-interrupting',
-        '.ytp-ad-player-overlay',
-        '.ytp-ad-skip-button',
-        '.ytp-ad-skip-button-modern'
-    ];
+    if (!moviePlayer || !video) {
+        return;
+    }
 
-    const adShowing = document.querySelector(adSelectors.join(', '));
+    const adPlaying = isAd(moviePlayer);
 
-    const skipSelectors = [
-        '.ytp-ad-skip-button',
-        '.ytp-skip-ad-button',
-        '.ytp-ad-skip-button-modern',
-        '.ytp-skip-ad-button-modern',
-        '.ytp-ad-skip-button-container [class*="skip"]',
-        '[class*="ytp-ad-skip-button"]'
-    ];
-    const skipButton = document.querySelector(skipSelectors.join(', '));
-
-    const overlayCloseButton = document.querySelector('.ytp-ad-overlay-close-button');
-
-    const isAd = !!(adShowing || skipButton);
-
-    if (isAd) {
+    if (adPlaying) {
         if (!wasAd) {
             originalSpeed = video.playbackRate;
             originalMuted = video.muted;
             wasAd = true;
         }
 
-        if (video.playbackRate !== SPEED) {
-            video.playbackRate = SPEED;
-        }
-        if (!video.muted) {
-            video.muted = true;
-        }
-
-        // This feature is disabled by YouTube, which uses some kind of
-        // flag to control when an action (click) is being sent by
-        // YouTube itself or by a third party...
-        if (skipButton && skipButton.offsetParent !== null) {
-            skipButton.click();
-            return;
-        }
-    } else {
-        if (wasAd) {
-            video.playbackRate = originalSpeed;
-            video.muted = originalMuted;
-            wasAd = false;
-        }
+        applyAdState(video);
+        return;
     }
 
-    // TODO: make this work in the future... I guess...
-    //
-    // if (overlayCloseButton) {
-    //     const rect = overlayCloseButton.getBoundingClientRect();
-    //     if (rect.width > 0 && rect.height > 0) {
-    //         console.log('[AdSkipper] Closing overlay');
-    //         simulateClick(overlayCloseButton);
-    //     }
-    // }
+    if (wasAd) {
+        restoreVideoState(video);
+        wasAd = false;
+    }
 }
 
-console.log('Ad Skipper running...')
+const observer = new MutationObserver((mutations) => {
+    for (const mutation of mutations) {
+        if (
+            mutation.type === 'attributes' &&
+            mutation.attributeName === 'class'
+        ) {
+            handleAd();
+            break;
+        }
+    }
+});
 
-'use strict;'
-document.addEventListener('yt-navigate-finish', handleAd);
+function observePlayer() {
+    const moviePlayer = getMoviePlayer();
+
+    if (!moviePlayer) {
+        return;
+    }
+
+    observer.observe(moviePlayer, {
+        attributes: true,
+        attributeFilter: ['class'],
+    });
+}
+
+console.log('[Ad Skipper] Running...');
+document.addEventListener('yt-navigate-finish', () => {
+    observePlayer();
+    handleAd();
+});
+
 setInterval(handleAd, CHECK_INTERVAL);
+
+observePlayer();
+handleAd();
